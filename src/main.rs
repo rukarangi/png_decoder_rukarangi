@@ -36,10 +36,13 @@ fn get_output(buf: Vec<u8>) -> Result<Output, String> {
     let mut bit_depth: u8;
     let mut color_type: u8;
 
+    let mut dat_appended: Vec<u8> = Vec::new();
+
     let test: bool = check_pattern(&buf, 0xF, IHDR);
     println!("{}", test);
 
     for (idx, byte) in buf.iter().enumerate() {
+        // find header chunk and get data out
         if check_pattern(&buf, idx, IHDR) {
             width = u32::from_be_bytes([
                 buf[idx + 1],
@@ -62,7 +65,33 @@ fn get_output(buf: Vec<u8>) -> Result<Output, String> {
             println!("Bit Depth: {}", bit_depth);
             println!("Color Type: {}", color_type);
         }
+
+        if check_pattern(&buf, idx, IDAT) {
+            println!("{:X?}", [
+                buf[idx - 7],
+                buf[idx - 6],
+                buf[idx - 5],
+                buf[idx - 4],
+            ]);
+            let length: u32 = u32::from_be_bytes([
+                buf[idx - 7],
+                buf[idx - 6],
+                buf[idx - 5],
+                buf[idx - 4],
+            ]);
+            println!("{}", length);
+            let dat = &buf[(idx+1)..(idx + 1 + length as usize)];
+            //println!("{:X?}", dat);
+            dat_appended.extend_from_slice(dat);
+            //println!("{:X?}", dat_appended);
+        }
     }
+    
+    // attempt to decompress, [2..] wierdness with zlib
+    let dat_inflated: Vec<u8> = match decompress_to_vec(&dat_appended[2..]) {
+        Ok(dat) => dat,
+        Err(err) => panic!("Failed to decompress: {:?}", err),
+    };
     
     Ok(NILOUT)
 }
