@@ -4,10 +4,11 @@ use miniz_oxide::inflate::decompress_to_vec;
 use std::fs::File;
 use std::io::Read;
 
-const PATH: &str = "../../Downloads/engi.png";
+const PATH: &str = "../../Programming/ascii-image-generator/rust-module/data/chrome-512.png";
 const IDAT: [u8; 4] = [0x49, 0x44, 0x41, 0x54];
 const IHDR: [u8; 4] = [0x49, 0x48, 0x44, 0x52];
 const HEADER: [u8; 8] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const COLOR_TYPE_TO_PIXEL_DIST: [u8; 7] = [1, 0, 3, 1, 4, 0, 4];
 
 #[derive(Debug)]
 struct Pixel {
@@ -30,11 +31,11 @@ const NILOUT: Output = Output {
     pixels: Vec::new(),
 };
 
-fn get_output(buf: Vec<u8>) -> Result<Output, String> {
-    let mut width: u32;
-    let mut height: u32;
-    let mut bit_depth: u8;
-    let mut color_type: u8;
+fn get_output(buf: Vec<u8>) -> Result<Output, &'static str> {
+    let mut width: u32 = 0;
+    let mut height: u32 = 0;
+    let mut bit_depth: u8 = 0;
+    let mut color_type: u8 = 0;
 
     let mut dat_appended: Vec<u8> = Vec::new();
 
@@ -93,7 +94,47 @@ fn get_output(buf: Vec<u8>) -> Result<Output, String> {
         Err(err) => panic!("Failed to decompress: {:?}", err),
     };
     
+    let pixels: Vec<Pixel> = pixel_maker(dat_inflated, width, height, bit_depth, color_type);
+
     Ok(NILOUT)
+}
+
+fn pixel_maker(data: Vec<u8>, width: u32, height: u32, bit_depth: u8, color_type: u8) -> Vec<Pixel> {
+    println!("{:X?}", &data[..1000]);
+    let mut test = Vec::new();
+    let filter: u8 = data[0];
+    println!("{:X?}", filter);
+    for (idx, byte) in data.iter().enumerate() {
+        if idx == 0 || idx & (width + 1) as usize == 0 {
+            //test.push(idx as u8);
+            continue;
+        }
+        test.push(*byte);
+
+        let good_byte = match apply_filter(filter, &data, 32, idx, bit_depth, color_type) {
+            Ok(val) => val,
+            Err(err) => panic!("{}", err),
+        };
+    }
+    
+    println!("{:X?}", &test[..1000]);
+
+    return Vec::new();
+} 
+
+fn apply_filter(filter: u8, data: &Vec<u8>, length: usize, target: usize, bit_depth: u8, color_type: u8) -> Result<u8, &'static str> {
+    if (8 * COLOR_TYPE_TO_PIXEL_DIST[color_type as usize]) as usize != length {
+        return Err("Tried to apply filter to wrong lengthed section");
+    }
+
+    // let target_bytes: Vec<u8> = vec![data[target]]
+
+    match filter {
+        0 => return Ok(data[target]),
+        _ => return Err("This filter type is not implemented"),
+    }
+
+    Ok(0x0)
 }
 
 fn check_pattern(buffer: &Vec<u8>, idx: usize, pattern: [u8; 4]) -> bool {
@@ -103,7 +144,7 @@ fn check_pattern(buffer: &Vec<u8>, idx: usize, pattern: [u8; 4]) -> bool {
     let last_four: [u8; 4] = [buffer[idx-3],buffer[idx-2],buffer[idx-1],buffer[idx]];
     // println!("{:X?}", last_four);
 
-    last_four == pattern
+    return last_four == pattern;
 }
 
 // just used to get bytes from image for development
