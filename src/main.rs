@@ -94,9 +94,23 @@ fn get_output(buf: Vec<u8>) -> Result<Output, &'static str> {
         Err(err) => panic!("Failed to decompress: {:?}", err),
     };
     
+    let dimension2_shiz = become_2d(&dat_inflated, width as usize, height as usize);
+
     let pixels: Vec<Pixel> = pixel_maker(dat_inflated, width, height, bit_depth, color_type);
 
     Ok(NILOUT)
+}
+
+fn become_2d(data: &Vec<u8>, width: usize, height: usize) -> Vec<Vec<u8>> {
+    let mut output: Vec<Vec<u8>> = Vec::new();
+
+    for y in 0..height {
+        for x in 0..width {
+            
+        }
+    }
+
+    return output;
 }
 
 fn pixel_maker(data: Vec<u8>, width: u32, height: u32, bit_depth: u8, color_type: u8) -> Vec<Pixel> {
